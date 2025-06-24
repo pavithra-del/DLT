@@ -1,0 +1,49 @@
+
+import numpy as np
+from sklearn.model_selection import train_test_split
+from sklearn.datasets import load_breast_cancer
+from sklearn.metrics import accuracy_score
+
+X, y = load_breast_cancer(return_X_y=True)
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+
+def standardize(X_train, X_test):
+    mean = np.mean(X_train, axis=0)
+    std = np.std(X_train, axis=0) + 1e-8
+    X_train_std = (X_train - mean) / std
+    X_test_std = (X_test - mean) / std
+    return X_train_std, X_test_std
+
+X_train, X_test = standardize(X_train, X_test)
+
+class LogisticRegressionModel:
+    def __init__(self, lr=0.001, n_iter=5000):
+        self.lr = lr
+        self.n_iter = n_iter
+
+    def _sigmoid(self, z):
+        return 1 / (1 + np.exp(-z))
+
+    def fit(self, X, y):
+        n_samples, n_features = X.shape
+        self.weights = np.zeros(n_features)
+        self.bias = 0
+        for i in range(self.n_iter):
+            model = np.dot(X, self.weights) + self.bias
+            y_pred = self._sigmoid(model)
+            dw = (1 / n_samples) * np.dot(X.T, (y_pred - y))
+            db = (1 / n_samples) * np.sum(y_pred - y)
+            self.weights -= self.lr * dw
+            self.bias -= self.lr * db
+            if (i + 1) % 1000 == 0:
+                cost = -np.mean(y * np.log(y_pred + 1e-8) + (1 - y) * np.log(1 - y_pred + 1e-8))
+                print(f"Iter {i + 1}, Cost: {cost:.4f}")
+
+    def predict(self, X):
+        y_pred = self._sigmoid(np.dot(X, self.weights) + self.bias)
+        return (y_pred > 0.5).astype(int)
+
+model = LogisticRegressionModel()
+model.fit(X_train, y_train)
+y_pred = model.predict(X_test)
+print("Test Accuracy:", accuracy_score(y_test, y_pred))
